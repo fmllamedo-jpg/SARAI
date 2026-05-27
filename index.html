@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SARAI</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0D1B3E;
+    color: #f0f0ec;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    padding: 3.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .logo {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    border-radius: 50%;
+  }
+
+  .divider {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #C9A84C, transparent);
+  }
+
+  .tagline {
+    font-size: 12px;
+    color: rgba(201,168,76,0.7);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .container {
+    max-width: 960px;
+    width: 100%;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(201,168,76,0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 1rem;
+  }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .tool-card {
+    background: rgba(255,255,255,0.03);
+    border: 0.5px solid rgba(201,168,76,0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+  .tool-card:hover {
+    background: rgba(201,168,76,0.07);
+    border-color: rgba(201,168,76,0.5);
+    transform: translateY(-2px);
+  }
+
+  .tool-icon { font-size: 22px; }
+
+  .tool-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f0f0ec;
+    margin-top: 2px;
+  }
+
+  .tool-desc {
+    font-size: 12px;
+    color: rgba(240,240,236,0.45);
+    line-height: 1.6;
+  }
+
+  .tool-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 6px;
+    width: fit-content;
+    background: rgba(201,168,76,0.12);
+    color: #C9A84C;
+    border: 0.5px solid rgba(201,168,76,0.3);
+  }
+
+  .tool-badge.soon {
+    background: rgba(255,255,255,0.04);
+    color: rgba(240,240,236,0.3);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .card-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  footer {
+    padding: 2rem;
+    font-size: 11px;
+    color: rgba(240,240,236,0.15);
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 600px) {
+    .logo { width: 120px; height: 120px; }
+    header { padding: 2rem 1rem 1.5rem; }
+    .container { padding: 1.5rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.jpg" alt="SARAI" class="logo">
+  <div class="divider"></div>
+  <p class="tagline">Panel de gestión</p>
+</header>
+
+<div class="container">
+  <div class="section-label">Herramientas</div>
+  <div class="tools-grid">
+
+    <a href="costeo-importacion/index.html" class="tool-card">
+      <div class="tool-icon">🚢</div>
+      <div class="tool-name">Costeo de Importación</div>
+      <div class="tool-desc">Calculá el costo total de una importación: FOB, CIF, tributos, gastos y costo unitario por producto.</div>
+      <div class="tool-badge">Activo</div>
+    </a>
+
+    <div class="tool-card card-disabled">
+      <div class="tool-icon">📦</div>
+      <div class="tool-name">Inventario</div>
+      <div class="tool-desc">Control de stock, movimientos y alertas de reposición.</div>
+      <div class="tool-badge soon">Próximamente</div>
+    </div>
+
+    <div class="tool-card card-disabled">
+      <div class="tool-icon">📊</div>
+      <div class="tool-name">Reportes</div>
+      <div class="tool-desc">Comparativos históricos de costeos e indicadores de importación.</div>
+      <div class="tool-badge soon">Próximamente</div>
+    </div>
+
+  </div>
+</div>
+
+<footer>SARAI &copy; 2026</footer>
+
+</body>
+</html>
