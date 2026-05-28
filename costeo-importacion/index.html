@@ -693,21 +693,6 @@ async function descargarCosteo() {
     pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
   });
 
-  // 12 columns: A-L for products table; info sections use merged cells across these same cols
-  ws.columns = [
-    { width: 32 }, // A: producto / label col 1
-    { width: 20 }, // B: value col 1
-    { width: 10 }, // C: separator / cant
-    { width: 26 }, // D: label col 2
-    { width: 20 }, // E: value col 2
-    { width: 10 }, // F: separator / FOB real unit
-    { width: 26 }, // G: label col 3
-    { width: 20 }, // H: value col 3
-    { width: 13 }, // I
-    { width: 13 }, // J
-    { width: 15 }, // K
-    { width: 15 }, // L
-  ];
 
   const s = {
     title:   { font: { bold: true, size: 15, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } }, alignment: { horizontal: 'center', vertical: 'middle' } },
@@ -737,20 +722,24 @@ async function descargarCosteo() {
 
   function emptyRow(h) { const r = ws.addRow([]); r.height = h || 5; return r; }
 
-  // Adds a row with 3 label+value pairs, each label merged 1 col, value merged 1 col, separated by a spacer col
-  // Layout: [A=lbl][B=val][C=spacer][D=lbl][E=val][F=spacer][G=lbl][H=val][I-L=spacer/merged]
+  // Info rows: each slot = label merged 2 cols + value merged 2 cols (no spacer)
+  // Slot 0: cols 1+2 (label), cols 3+4 (value)
+  // Slot 1: cols 5+6 (label), cols 7+8 (value)
+  // Slot 2: cols 9+10 (label), cols 11+12 (value)
   function dataRow3(items) {
     const row = ws.addRow([]); row.height = 22;
-    const slots = [[1,2],[4,5],[7,8]];
+    const slots = [[1,2,3,4],[5,6,7,8],[9,10,11,12]];
     items.slice(0,3).forEach(([lbl, val, nf, color, bold], i) => {
-      const [lc, vc] = slots[i];
-      const lcell = row.getCell(lc); lcell.value = lbl; applyS(lcell, s.lbl);
-      const vcell = row.getCell(vc); vcell.value = val;
+      const [ls, le, vs, ve] = slots[i];
+      const lcell = row.getCell(ls); lcell.value = lbl; applyS(lcell, s.lbl);
+      ws.mergeCells(row.number, ls, row.number, le);
+      const vcell = row.getCell(vs); vcell.value = val;
       if (nf) vcell.numFmt = nf;
       vcell.font = { bold: bold !== false, size: 9, color: { argb: color || 'FF1A1A1A' }, name: 'Calibri' };
       vcell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
       vcell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
       vcell.border = { right: { style: 'hair', color: { argb: 'FFEEEEEE' } }, bottom: { style: 'hair', color: { argb: 'FFEEEEEE' } } };
+      ws.mergeCells(row.number, vs, row.number, ve);
     });
     return row;
   }
@@ -800,10 +789,12 @@ async function descargarCosteo() {
   tgL.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
   tgL.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
   tgL.border = { right: { style: 'hair', color: { argb: 'FFCCCCCC' } } };
-  const tgV = tgRow.getCell(2); tgV.value = gastosTotal; tgV.numFmt = USD;
+  ws.mergeCells(tgRow.number, 1, tgRow.number, 2);
+  const tgV = tgRow.getCell(3); tgV.value = gastosTotal; tgV.numFmt = USD;
   tgV.font = { bold: true, size: 9, color: { argb: 'FF1A5276' }, name: 'Calibri' };
   tgV.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
   tgV.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+  ws.mergeCells(tgRow.number, 3, tgRow.number, 4);
   emptyRow(5);
 
   // ── PRODUCTOS ──
@@ -811,7 +802,7 @@ async function descargarCosteo() {
 
   // Product table uses all 12 cols but with different mapping than info sections
   const prodCols = [
-    { w: 32, h: 'Producto' },
+    { w: 30, h: 'Producto' },
     { w: 7,  h: 'Cant.' },
     { w: 13, h: 'FOB Real\nUnit. (USD)' },
     { w: 13, h: 'FOB Real\nTotal (USD)' },
@@ -819,8 +810,8 @@ async function descargarCosteo() {
     { w: 13, h: 'CIF Decl.\n(USD)' },
     { w: 9,  h: 'Der.\nImp.(%)' },
     { w: 9,  h: 'T.Estad.\n(%)' },
-    { w: 8,  h: 'IVA\n(%)' },
-    { w: 13, h: 'Tributos\n(USD)' },
+    { w: 10, h: 'IVA\n(%)' },
+    { w: 15, h: 'Tributos\n(USD)' },
     { w: 15, h: 'Costo Unit.\nNeto (USD)' },
     { w: 15, h: 'Costo Unit.\nc/IVA (USD)' },
   ];
