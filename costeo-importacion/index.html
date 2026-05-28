@@ -940,9 +940,9 @@ function recalcular() {
     const pctFob = fobRealTotalGlobal > 0 ? fobRealTotal / fobRealTotalGlobal : 0;
     const gastoProrrat = gastosTotal * pctFob;
     const costoNeto = fobRealTotal + tribDer + tribEstad + gastoProrrat;
-    const costoTotal = costoNeto + tribIva;
     const costoUnitNeto = p.cant > 0 ? costoNeto / p.cant : 0;
-    const costoUnitConIva = p.cant > 0 ? costoTotal / p.cant : 0;
+    const costoUnitConIva = costoUnitNeto * (1 + p.iva / 100);
+    const costoTotal = costoNeto + tribIva;
     const costoUnit = costoUnitConIva;
     return { ...p, fobRealTotal, fobDeclTotal, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal, costoUnit, costoUnitNeto, costoUnitConIva };
   });
