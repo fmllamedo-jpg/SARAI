@@ -676,9 +676,10 @@ async function descargarCosteo() {
     const gastoProrrat = gastosTotal * pctFob;
     const costoNeto = fobRealTotal + tribDer + tribEstad + gastoProrrat;
     const costoTotal = costoNeto + tribIva;
+    const costoUnitNeto = p.cant > 0 ? costoNeto / p.cant : 0;
     return { ...p, fobRealTotal, fobDeclTotal, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal,
-      costoUnitNeto: p.cant > 0 ? costoNeto / p.cant : 0,
-      costoUnitConIva: p.cant > 0 ? costoTotal / p.cant : 0 };
+      costoUnitNeto,
+      costoUnitConIva: costoUnitNeto * (1 + p.iva / 100) };
   });
 
   const totFob = calc.reduce((a,p) => a+p.fobRealTotal, 0);
