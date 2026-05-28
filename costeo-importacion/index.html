@@ -115,6 +115,7 @@
   .historial-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 2rem 0; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -640,48 +641,256 @@ function exportarJSON() {
   a.click();
 }
 
-function descargarCosteo() {
+async function descargarCosteo() {
   if (!productos.length) { alert('No hay productos para exportar.'); return; }
 
   const gastosTotal = totalGastosGenerales();
   const fobRealTotalGlobal = productos.reduce((a, p) => a + p.fobRealUnit * p.cant, 0);
   const seguroTotal = parseFloat(document.getElementById('g-seguro').value) || 0;
   const fleteDeclaradoTotal = parseFloat(document.getElementById('g-flete-decl').value) || 0;
+  const pctIIBB = parseFloat(document.getElementById('pct-iibb').value) || 0;
+  const pctGanancias = parseFloat(document.getElementById('pct-ganancias').value) || 0;
+  const tc = parseFloat(document.getElementById('imp-tc').value) || 0;
+  const ref = document.getElementById('imp-ref').value || 'importacion';
+  const prov = document.getElementById('imp-prov').value || '—';
+  const origen = document.getElementById('imp-origen').value || '—';
+  const fecha = document.getElementById('imp-fecha').value || '—';
 
   const calc = productos.map(p => {
     const fobRealTotal = p.fobRealUnit * p.cant;
-    const pctSeguro = fobRealTotalGlobal > 0 ? fobRealTotal / fobRealTotalGlobal : 0;
-    const seguroProd = seguroTotal * pctSeguro;
+    const pctSeg = fobRealTotalGlobal > 0 ? fobRealTotal / fobRealTotalGlobal : 0;
+    const seguroProd = seguroTotal * pctSeg;
     const fobDeclTotal = p.fobDeclUnit * p.cant;
-    const fleteDeclaradoProd = fleteDeclaradoTotal * pctSeguro;
+    const fleteDeclaradoProd = fleteDeclaradoTotal * pctSeg;
     const cifDecl = fobDeclTotal + seguroProd + fleteDeclaradoProd;
     const tribDer = cifDecl * p.der / 100;
     const tribEstad = cifDecl * p.estad / 100;
     const tribIva = cifDecl * p.iva / 100;
+    const tribTotal = tribDer + tribEstad + tribIva;
     const pctFob = fobRealTotalGlobal > 0 ? fobRealTotal / fobRealTotalGlobal : 0;
     const gastoProrrat = gastosTotal * pctFob;
     const costoNeto = fobRealTotal + tribDer + tribEstad + gastoProrrat;
     const costoTotal = costoNeto + tribIva;
-    const costoUnitNeto  = p.cant > 0 ? costoNeto  / p.cant : 0;
-    const costoUnitFinal = p.cant > 0 ? costoTotal / p.cant : 0;
-    return { nombre: p.nombre, cant: p.cant, costoUnitNeto, costoUnitFinal };
+    return { ...p, fobRealTotal, fobDeclTotal, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal,
+      costoUnitNeto: p.cant > 0 ? costoNeto / p.cant : 0,
+      costoUnitConIva: p.cant > 0 ? costoTotal / p.cant : 0 };
   });
 
-  const wb = XLSX.utils.book_new();
-  const ws = {};
-  const headerRow = ['Producto', 'Cantidad', 'Costo Neto Unit. (USD)', 'Costo Final Unit. (USD)'];
-  headerRow.forEach((h, c) => { ws[XLSX.utils.encode_cell({ r: 0, c })] = { t: 's', v: h }; });
-  calc.forEach((p, r) => {
-    ws[XLSX.utils.encode_cell({ r: r + 1, c: 0 })] = { t: 's', v: p.nombre };
-    ws[XLSX.utils.encode_cell({ r: r + 1, c: 1 })] = { t: 'n', v: p.cant };
-    ws[XLSX.utils.encode_cell({ r: r + 1, c: 2 })] = { t: 'n', v: Math.round(p.costoUnitNeto  * 100) / 100 };
-    ws[XLSX.utils.encode_cell({ r: r + 1, c: 3 })] = { t: 'n', v: Math.round(p.costoUnitFinal * 100) / 100 };
+  const totFob = calc.reduce((a,p) => a+p.fobRealTotal, 0);
+  const totCif = calc.reduce((a,p) => a+p.cifDecl, 0);
+  const totDer = calc.reduce((a,p) => a+p.tribDer, 0);
+  const totEstad = calc.reduce((a,p) => a+p.tribEstad, 0);
+  const totIva = calc.reduce((a,p) => a+p.tribIva, 0);
+  const totIIBB = totCif * pctIIBB / 100;
+  const totGanan = totCif * pctGanancias / 100;
+  const totNacionalizar = totDer + totEstad + totIva + totIIBB + totGanan;
+  const totCosto = calc.reduce((a,p) => a+p.costoTotal, 0);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'SARAI';
+  const ws = wb.addWorksheet('Costeo', {
+    pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
   });
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: calc.length, c: 3 } });
-  ws['!cols'] = [{ wch: 28 }, { wch: 12 }, { wch: 20 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'Costeo');
-  const ref = document.getElementById('imp-ref').value || 'importacion';
-  XLSX.writeFile(wb, 'costeo_' + ref + '.xlsx');
+
+  ws.columns = [
+    { width: 30 }, { width: 8 }, { width: 13 }, { width: 13 },
+    { width: 13 }, { width: 13 }, { width: 9 }, { width: 9 },
+    { width: 8 }, { width: 13 }, { width: 8 }, { width: 13 },
+    { width: 13 }, { width: 15 }, { width: 15 },
+  ];
+  const COLS = 15;
+
+  const s = {
+    title:   { font: { bold: true, size: 14, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } }, alignment: { horizontal: 'center', vertical: 'middle' } },
+    section: { font: { bold: true, size: 9,  color: { argb: 'FFFFFFFF' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F5496' } }, alignment: { vertical: 'middle' } },
+    lbl:     { font: { size: 9, color: { argb: 'FF555555' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } }, alignment: { horizontal: 'right', vertical: 'middle' } },
+    val:     { font: { bold: true, size: 9, color: { argb: 'FF1A1A1A' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }, alignment: { horizontal: 'left', vertical: 'middle' } },
+    colH:    { font: { bold: true, size: 8, color: { argb: 'FFFFFFFF' }, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A5568' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true }, border: { bottom: { style: 'thin', color: { argb: 'FF2D3748' } } } },
+    data0:   { font: { size: 9, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }, alignment: { horizontal: 'right', vertical: 'middle' }, border: { bottom: { style: 'hair', color: { argb: 'FFDDDDDD' } } } },
+    data1:   { font: { size: 9, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F8FA' } }, alignment: { horizontal: 'right', vertical: 'middle' }, border: { bottom: { style: 'hair', color: { argb: 'FFDDDDDD' } } } },
+    totals:  { font: { bold: true, size: 9, name: 'Calibri' }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }, alignment: { horizontal: 'right', vertical: 'middle' }, border: { top: { style: 'thin', color: { argb: 'FF888888' } }, bottom: { style: 'medium', color: { argb: 'FF444444' } } } },
+  };
+
+  function applyS(cell, style) {
+    if (style.font) cell.font = style.font;
+    if (style.fill) cell.fill = style.fill;
+    if (style.alignment) cell.alignment = style.alignment;
+    if (style.border) cell.border = style.border;
+  }
+
+  function addMergedRow(value, style, height, fromCol, toCol) {
+    const row = ws.addRow([]);
+    row.height = height;
+    const cell = row.getCell(fromCol || 1);
+    cell.value = value;
+    applyS(cell, style);
+    ws.mergeCells(row.number, fromCol || 1, row.number, toCol || COLS);
+    return row;
+  }
+
+  function addEmptyRow(h) { const r = ws.addRow([]); r.height = h || 6; return r; }
+
+  function addInfoRow(pairs) {
+    const row = ws.addRow([]);
+    row.height = 20;
+    pairs.forEach(([lbl, val], i) => {
+      const lc = i * 3 + 1;
+      const lcell = row.getCell(lc);
+      lcell.value = lbl;
+      applyS(lcell, s.lbl);
+      const vcell = row.getCell(lc + 1);
+      vcell.value = val;
+      applyS(vcell, s.val);
+    });
+    return row;
+  }
+
+  // ── TÍTULO ──
+  addMergedRow('COSTEO DE IMPORTACIÓN', s.title, 34);
+  addMergedRow(`${ref}  ·  ${prov}  ·  ${origen}  ·  ${fecha}`, {
+    font: { size: 9, color: { argb: 'FF444444' }, name: 'Calibri' },
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2F7' } },
+    alignment: { horizontal: 'left', vertical: 'middle' },
+  }, 16);
+  addEmptyRow(6);
+
+  // ── DATOS ──
+  addMergedRow('DATOS DE LA IMPORTACIÓN', s.section, 18);
+  addInfoRow([['Referencia/PO', ref], ['Proveedor', prov], ['Origen', origen], ['Fecha', fecha], ['T.C. ARS/USD', tc || '—']]);
+  addEmptyRow(6);
+
+  // ── RESUMEN ──
+  addMergedRow('RESUMEN DE LA IMPORTACIÓN', s.section, 18);
+  const resRow1 = ws.addRow([]); resRow1.height = 20;
+  const resRow2 = ws.addRow([]); resRow2.height = 20;
+
+  const resData = [
+    ['FOB Total (USD)', totFob, '"USD "#,##0.00', 'FF1A5276', false],
+    ['CIF Total (USD)', totCif, '"USD "#,##0.00', 'FF1A5276', false],
+    ['Derechos Imp. (USD)', totDer, '"USD "#,##0.00', 'FF7D4B00', false],
+    ['Tasa Estadística (USD)', totEstad, '"USD "#,##0.00', 'FF7D4B00', false],
+    ['IVA sobre CIF (USD)', totIva, '"USD "#,##0.00', 'FF7D4B00', false],
+    ['Anticipo IIBB (USD)', totIIBB, '"USD "#,##0.00', 'FF7D4B00', false],
+    ['Anticipo Ganancias (USD)', totGanan, '"USD "#,##0.00', 'FF7D4B00', false],
+    ['Gastos Generales (USD)', gastosTotal, '"USD "#,##0.00', 'FF555555', false],
+    ['Para Nacionalizar (USD)', totNacionalizar, '"USD "#,##0.00', 'FF922B21', true],
+    ['Costo Total Imp. (USD)', totCosto, '"USD "#,##0.00', 'FF1A5276', true],
+  ];
+
+  resData.forEach(([lbl, val, nf, color, bold], i) => {
+    const row = i < 5 ? resRow1 : resRow2;
+    const idx = i < 5 ? i : i - 5;
+    const lc = idx * 3 + 1;
+    const lcell = row.getCell(lc);
+    lcell.value = lbl;
+    applyS(lcell, s.lbl);
+    const vcell = row.getCell(lc + 1);
+    vcell.value = val;
+    vcell.numFmt = nf;
+    vcell.font = { bold: bold, size: 9, color: { argb: 'FF' + color.slice(2) }, name: 'Calibri' };
+    vcell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+    vcell.alignment = { horizontal: 'left', vertical: 'middle' };
+  });
+
+  if (tc > 0) {
+    const arsRow = ws.addRow([]); arsRow.height = 20;
+    const lc = arsRow.getCell(1); lc.value = 'Equivalente ARS'; applyS(lc, s.lbl);
+    const vc = arsRow.getCell(2); vc.value = totCosto * tc;
+    vc.numFmt = '"ARS "#,##0'; vc.font = { bold: true, size: 9, color: { argb: 'FF1E8449' }, name: 'Calibri' };
+    vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+    vc.alignment = { horizontal: 'left', vertical: 'middle' };
+  }
+  addEmptyRow(6);
+
+  // ── GASTOS GENERALES ──
+  addMergedRow('GASTOS GENERALES DE LA IMPORTACIÓN', s.section, 18);
+  const gastosNombres = {
+    'g-flete-int':'Flete Internacional','g-flete-decl':'Flete Declarado','g-origen':'Gastos en Origen',
+    'g-destino':'Gastos en Destino','g-terminal':'Terminal Portuaria','g-flete-int2':'Flete Interno',
+    'g-cert':'Certificaciones','g-insp':'Inspecciones','g-desp':'Honorarios Despachante','g-seguro':'Seguro','g-otros':'Otros'
+  };
+  const gastosActivos = Object.entries(gastosNombres)
+    .map(([id, lbl]) => [lbl, parseFloat(document.getElementById(id).value) || 0])
+    .filter(([, v]) => v > 0);
+
+  for (let i = 0; i < gastosActivos.length; i += 5) {
+    const chunk = gastosActivos.slice(i, i + 5);
+    const row = ws.addRow([]); row.height = 20;
+    chunk.forEach(([lbl, val], j) => {
+      const lc = j * 3 + 1;
+      const lcell = row.getCell(lc); lcell.value = lbl + ' (USD)'; applyS(lcell, s.lbl);
+      const vcell = row.getCell(lc + 1); vcell.value = val;
+      vcell.numFmt = '"USD "#,##0.00'; applyS(vcell, s.val);
+    });
+  }
+  const tgRow = ws.addRow([]); tgRow.height = 20;
+  const tgLbl = tgRow.getCell(1); tgLbl.value = 'TOTAL GASTOS GENERALES';
+  tgLbl.font = { bold: true, size: 9, color: { argb: 'FF333333' }, name: 'Calibri' };
+  tgLbl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+  tgLbl.alignment = { horizontal: 'right', vertical: 'middle' };
+  const tgVal = tgRow.getCell(2); tgVal.value = gastosTotal;
+  tgVal.numFmt = '"USD "#,##0.00';
+  tgVal.font = { bold: true, size: 9, color: { argb: 'FF1A5276' }, name: 'Calibri' };
+  tgVal.alignment = { horizontal: 'left', vertical: 'middle' };
+  addEmptyRow(6);
+
+  // ── PRODUCTOS ──
+  addMergedRow('DETALLE DE PRODUCTOS', s.section, 18);
+  const chRow = ws.addRow([]); chRow.height = 30;
+  ['Producto','Cant.','FOB Real\nUnit. (USD)','FOB Real\nTotal (USD)','FOB Decl.\nUnit. (USD)','CIF Decl.\n(USD)',
+   'Der. Imp.\n(%)','T. Estad.\n(%)','IVA\n(%)','Tributos\n(USD)','% FOB\nReal','Gastos\nProrrat. (USD)',
+   'Costo\nTotal (USD)','Costo Unit.\nNeto (USD)','Costo Unit.\nc/IVA (USD)']
+  .forEach((h, i) => { const c = chRow.getCell(i+1); c.value = h; applyS(c, s.colH); });
+
+  calc.forEach((p, idx) => {
+    const ds = idx % 2 === 0 ? s.data0 : s.data1;
+    const row = ws.addRow([]); row.height = 18;
+    const nc = row.getCell(1); nc.value = p.nombre;
+    applyS(nc, { ...ds, alignment: { horizontal: 'left', vertical: 'middle' } });
+
+    [[2,p.cant,'0'],[3,p.fobRealUnit,'"USD "#,##0.00'],[4,p.fobRealTotal,'"USD "#,##0.00'],
+     [5,p.fobDeclUnit,'"USD "#,##0.00'],[6,p.cifDecl,'"USD "#,##0.00'],
+     [7,p.der,'0.0"%"'],[8,p.estad,'0.0"%"'],[9,p.iva,'0.0"%"'],
+     [10,p.tribTotal,'"USD "#,##0.00'],[11,p.pctFob*100,'0.0"%"'],
+     [12,p.gastoProrrat,'"USD "#,##0.00']].forEach(([col, val, nf]) => {
+      const c = row.getCell(col); c.value = val; c.numFmt = nf; applyS(c, ds);
+    });
+    [[13,p.costoTotal],[14,p.costoUnitNeto],[15,p.costoUnitConIva]].forEach(([col,val]) => {
+      const c = row.getCell(col); c.value = val; c.numFmt = '"USD "#,##0.00';
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: idx%2===0 ? 'FFE8F4FD' : 'FFF0F9FF' } };
+      c.font = { bold: true, size: 9, color: { argb: 'FF1A5276' }, name: 'Calibri' };
+      c.alignment = { horizontal: 'right', vertical: 'middle' };
+      c.border = { bottom: { style: 'hair', color: { argb: 'FFDDDDDD' } } };
+    });
+  });
+
+  // Totals row
+  const totRow = ws.addRow([]); totRow.height = 22;
+  for (let c = 1; c <= COLS; c++) applyS(totRow.getCell(c), s.totals);
+  ws.mergeCells(totRow.number, 1, totRow.number, 3);
+  const totLbl = totRow.getCell(1); totLbl.value = 'TOTALES';
+  totLbl.font = { bold: true, size: 9, name: 'Calibri' }; totLbl.alignment = { horizontal: 'left', vertical: 'middle' };
+  totLbl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+
+  [[4,totFob],[6,totCif],[10,calc.reduce((a,p)=>a+p.tribTotal,0)],
+   [12,calc.reduce((a,p)=>a+p.gastoProrrat,0)],[13,totCosto]].forEach(([col,val]) => {
+    const c = totRow.getCell(col); c.value = val; c.numFmt = '"USD "#,##0.00';
+    c.font = { bold: true, size: 9, color: { argb: 'FF1A5276' }, name: 'Calibri' };
+    applyS(c, s.totals);
+  });
+
+  addEmptyRow(8);
+  addMergedRow(`Generado por SARAI · ${new Date().toLocaleString('es-AR')}`, {
+    font: { size: 8, color: { argb: 'FF999999' }, italic: true, name: 'Calibri' },
+    alignment: { horizontal: 'right', vertical: 'middle' },
+  }, 14);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `costeo_${ref}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  a.click();
 }
 
 function toast(msg) {
