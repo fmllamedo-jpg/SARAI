@@ -944,7 +944,7 @@ function recalcular() {
     const costoUnitConIva = costoUnitNeto * (1 + p.iva / 100);
     const costoTotal = costoNeto + tribIva;
     const costoUnit = costoUnitConIva;
-    return { ...p, fobRealTotal, fobDeclTotal, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal, costoUnit, costoUnitNeto, costoUnitConIva };
+    return { ...p, fobRealTotal, fobDeclTotal, fleteDecl: fleteDeclaradoProd, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal, costoUnit, costoUnitNeto, costoUnitConIva };
   });
 
   renderTabla(calculados, fobRealTotalGlobal);
