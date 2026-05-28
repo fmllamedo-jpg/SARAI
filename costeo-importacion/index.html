@@ -83,6 +83,9 @@
   table.productos input { padding: 5px 7px; font-size: 12px; min-width: 70px; }
   table.productos .col-resultado { background: var(--teal-bg); color: var(--teal); font-weight: 600; font-size: 12px; padding: 5px 7px; border-radius: var(--radius); white-space: nowrap; }
   table.productos .col-sub { color: var(--text2); font-size: 11px; }
+  table.productos .td-input { width: 72px; padding: 4px 6px; font-size: 12px; background: transparent; border: 0.5px solid transparent; border-radius: 4px; text-align: right; color: inherit; font-family: inherit; }
+  table.productos .td-input:hover { border-color: var(--border); }
+  table.productos .td-input:focus { border-color: var(--border-strong); background: var(--surface); outline: none; }
   th.group-sep { border-left: 2px solid var(--border); }
   td.group-sep { border-left: 2px solid var(--border); }
 
@@ -917,6 +920,16 @@ function borrarProducto(id) {
   guardar(); recalcular();
 }
 
+function editarProducto(id, campo, valor) {
+  const p = productos.find(p => p.id === id);
+  if (!p) return;
+  const num = parseFloat(valor);
+  if (isNaN(num) || num < 0) return;
+  p[campo] = num;
+  guardar();
+  recalcular();
+}
+
 // ── Recalcular ────────────────────────────────────────────────────────────────
 function recalcular() {
   const gastosTotal = totalGastosGenerales();
@@ -968,10 +981,10 @@ function renderTabla(calc, fobTotalGlobal) {
   let html = calc.map(p => `
     <tr>
       <td style="font-weight:500">${p.nombre}<br><span class="col-sub">${p.cant} u.</span></td>
-      <td style="color:var(--text2)">${p.cant}</td>
-      <td class="group-sep">${fmtShort(p.fobRealUnit)}</td>
+      <td><input type="number" class="td-input" value="${p.cant}" min="0" onchange="editarProducto(${p.id},'cant',this.value)"></td>
+      <td class="group-sep"><input type="number" class="td-input" value="${p.fobRealUnit}" min="0" step="0.01" onchange="editarProducto(${p.id},'fobRealUnit',this.value)"></td>
       <td style="font-weight:500">${fmtShort(p.fobRealTotal)}</td>
-      <td class="group-sep" style="color:var(--text2)">${fmtShort(p.fobDeclUnit)}</td>
+      <td class="group-sep"><input type="number" class="td-input" value="${p.fobDeclUnit}" min="0" step="0.01" onchange="editarProducto(${p.id},'fobDeclUnit',this.value)"></td>
       <td style="color:var(--text2)">${fmtShort(p.fleteDecl)}</td>
       <td style="font-weight:500; color:var(--blue)">${fmtShort(p.cifDecl)}</td>
       <td class="group-sep">
