@@ -604,7 +604,8 @@
 
 <script>
 let productos = [];
-let gastosCampos = ['g-flete-int','g-flete-decl','g-origen','g-destino','g-terminal','g-flete-int2','g-cert','g-insp','g-desp','g-seguro','g-otros'];
+// g-flete-decl se usa solo para CIF (base imponible), no es un gasto adicional
+let gastosCampos = ['g-flete-int','g-origen','g-destino','g-terminal','g-flete-int2','g-cert','g-insp','g-desp','g-seguro','g-otros'];
 let infoCampos = ['imp-ref','imp-prov','imp-origen','imp-fecha','imp-tc'];
 
 // ── Persistencia local ────────────────────────────────────────────────────────
@@ -939,9 +940,9 @@ function recalcular() {
     const pctFob = fobRealTotalGlobal > 0 ? fobRealTotal / fobRealTotalGlobal : 0;
     const gastoProrrat = gastosTotal * pctFob;
     const costoNeto = fobRealTotal + tribDer + tribEstad + gastoProrrat;
-    const costoUnitNeto = p.cant > 0 ? costoNeto / p.cant : 0;
-    const costoUnitConIva = costoUnitNeto * (1 + p.iva / 100);
     const costoTotal = costoNeto + tribIva;
+    const costoUnitNeto = p.cant > 0 ? costoNeto / p.cant : 0;
+    const costoUnitConIva = p.cant > 0 ? costoTotal / p.cant : 0;
     const costoUnit = costoUnitConIva;
     return { ...p, fobRealTotal, fobDeclTotal, cifDecl, tribDer, tribEstad, tribIva, tribTotal, pctFob, gastoProrrat, costoNeto, costoTotal, costoUnit, costoUnitNeto, costoUnitConIva };
   });
